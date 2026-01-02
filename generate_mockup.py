@@ -1,53 +1,86 @@
 from PIL import Image, ImageDraw, ImageFont
-import os
+import math
 
 # Constants
 WIDTH = 320
 HEIGHT = 240
 BG_COLOR = (0, 0, 0)
 TEXT_COLOR = (255, 255, 255)
-ACCENT_COLOR = (0, 255, 255) # Cyan
-BUTTON_COLOR = (0, 0, 128) # Navy
-BUTTON_BORDER = (255, 255, 255)
-SLIDER_BG = (100, 100, 100)
+FREQ_COLOR = (255, 255, 0) # Yellow
+SLIDER_TRACK = (128, 128, 128) # Dark Grey
 SLIDER_KNOB = (255, 165, 0) # Orange
+BTN_BLUE = (0, 0, 255)
+BTN_NAVY = (0, 0, 128)
+BTN_GREEN = (0, 255, 0)
+BTN_GREY = (64, 64, 64) # Dark Grey
+
+def draw_rounded_rect(draw, xy, corner_radius, fill=None, outline=None):
+    x1, y1, x2, y2 = xy
+    draw.rectangle((x1 + corner_radius, y1, x2 - corner_radius, y2), fill=fill, outline=outline)
+    draw.rectangle((x1, y1 + corner_radius, x2, y2 - corner_radius), fill=fill, outline=outline)
+    draw.pieslice((x1, y1, x1 + corner_radius * 2, y1 + corner_radius * 2), 180, 270, fill=fill, outline=outline)
+    draw.pieslice((x2 - corner_radius * 2, y1, x2, y1 + corner_radius * 2), 270, 360, fill=fill, outline=outline)
+    draw.pieslice((x1, y2 - corner_radius * 2, x1 + corner_radius * 2, y2), 90, 180, fill=fill, outline=outline)
+    draw.pieslice((x2 - corner_radius * 2, y2 - corner_radius * 2, x2, y2), 0, 90, fill=fill, outline=outline)
 
 def create_mockup():
     img = Image.new('RGB', (WIDTH, HEIGHT), BG_COLOR)
     draw = ImageDraw.Draw(img)
     
+    # Fonts (using default if custom not available, scaling size roughly)
+    # Font 2 approx 16px, Font 4 approx 26px
+    try:
+        font_title = ImageFont.truetype("arial.ttf", 16)
+        font_freq = ImageFont.truetype("arial.ttf", 32)
+        font_unit = ImageFont.truetype("arial.ttf", 16)
+        font_btn = ImageFont.truetype("arial.ttf", 14)
+    except:
+        font_title = ImageFont.load_default()
+        font_freq = ImageFont.load_default()
+        font_unit = ImageFont.load_default()
+        font_btn = ImageFont.load_default()
+
     # Title
-    draw.text((100, 10), "Speaker Test Tone", fill=TEXT_COLOR)
+    draw.text((160, 5), "Tone Generator", fill=TEXT_COLOR, anchor="mt", font=font_title)
     
     # Frequency Display
-    draw.text((130, 40), "1000 Hz", fill=ACCENT_COLOR)
+    draw.text((160, 30), "1000", fill=FREQ_COLOR, anchor="mt", font=font_freq)
+    draw.text((260, 38), "Hz", fill=TEXT_COLOR, anchor="lt", font=font_unit)
     
     # Slider
-    slider_y = 80
-    draw.rectangle([20, slider_y, 300, slider_y + 10], fill=SLIDER_BG)
-    draw.ellipse([150, slider_y - 5, 170, slider_y + 15], fill=SLIDER_KNOB)
+    slider_x = 20
+    slider_y = 75
+    slider_w = 280
+    slider_h = 20
     
-    # Buttons Row 1 (-100, -10, +10, +100)
-    btn_y = 120
-    btn_w = 60
-    btn_h = 30
-    spacing = 10
-    x = 25
+    # Track
+    draw.rectangle([slider_x, slider_y + slider_h//2 - 2, slider_x + slider_w, slider_y + slider_h//2 + 2], fill=SLIDER_TRACK)
     
-    labels = ["-100", "-10", "+10", "+100"]
-    for label in labels:
-        draw.rectangle([x, btn_y, x + btn_w, btn_y + btn_h], fill=BUTTON_COLOR, outline=BUTTON_BORDER)
-        draw.text((x + 15, btn_y + 8), label, fill=TEXT_COLOR)
-        x += btn_w + spacing
-        
-    # Start/Stop Button
-    draw.rectangle([110, 170, 210, 210], fill=(0, 128, 0), outline=BUTTON_BORDER)
-    draw.text((135, 180), "START", fill=TEXT_COLOR)
+    # Knob (Logarithmic position for 1000Hz)
+    # p = log(1000/10) / log(20000/10) = log(100) / log(2000) = 2 / 3.301 = 0.606
+    p = 0.606
+    knob_x = slider_x + int(p * slider_w)
+    knob_y = slider_y + slider_h // 2
+    r = 8
+    draw.ellipse([knob_x - r, knob_y - r, knob_x + r, knob_y + r], fill=SLIDER_KNOB, outline=TEXT_COLOR)
     
-    # Volume Bar
-    draw.rectangle([60, 220, 260, 230], fill=(50, 50, 50), outline=BUTTON_BORDER)
-    draw.rectangle([60, 220, 200, 230], fill=(0, 255, 0)) # Partial fill
+    # Buttons
+    buttons = [
+        # Label, X, Y, W, H, Color
+        ("-100", 10, 115, 90, 35, BTN_BLUE),
+        ("+100", 110, 115, 90, 35, BTN_BLUE),
+        ("-10", 10, 160, 90, 35, BTN_NAVY),
+        ("+10", 110, 160, 90, 35, BTN_NAVY),
+        ("START", 210, 115, 100, 80, BTN_GREEN),
+        ("Vol -", 10, 205, 145, 30, BTN_GREY),
+        ("Vol +", 165, 205, 145, 30, BTN_GREY)
+    ]
     
+    for label, x, y, w, h, color in buttons:
+        draw_rounded_rect(draw, (x, y, x+w, y+h), 5, fill=color)
+        # Center text
+        draw.text((x + w/2, y + h/2), label, fill=TEXT_COLOR, anchor="mm", font=font_btn)
+
     # Save
     img.save("ui_mockup.png")
     print("Mockup created: ui_mockup.png")
