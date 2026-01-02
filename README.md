@@ -1,5 +1,7 @@
 # Speaker Test Tone Generator
 
+![UI Mockup](ui_mockup.png)
+
 A comprehensive audio frequency generator tool for the **ESP32-Cheap-Yellow-Display (CYD)**.
 
 ## Features
